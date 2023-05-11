@@ -1,0 +1,75 @@
+name: Build docker image
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 2' # 3am Tuesday UTC
+
+env:
+  VERSION: 1.11.0
+  IMAGE: ghcr.io/sondrelg/moldy-chef
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: amd64
+            arch: x86_64
+          - platform: arm64
+            arch: aarch64
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT }}
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          context: .
+          platforms: linux/${{ matrix.platform }}
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            ARCH=${{ matrix.arch }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ env.IMAGE }}:latest-${{ matrix.platform }},${{ env.IMAGE }}:${{ github.sha }}-${{ matrix.platform }}
+
+  create-manifest:
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/setup-qemu-action@v2
+      - uses: docker/setup-buildx-action@v2
+      - uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT }}
+      - name: Create SHA manifest and push
+        env:
+          SHA_IMAGE: ${{ env.IMAGE }}:${{ github.sha }}
+        run: |
+          docker manifest create ${{ env.SHA_IMAGE }} \
+            --amend ${{ env.SHA_IMAGE }}-amd64 \
+            --amend ${{ env.SHA_IMAGE }}-arm64
+          docker manifest inspect ${{ env.SHA_IMAGE }}
+          docker manifest push ${{ env.SHA_IMAGE }}
+
+      - name: Create latest manifest and push
+        env:
+          LATEST_IMAGE: ${{ env.IMAGE }}:latest
+        run: |
+          docker manifest create ${{ env.IMAGE }} \
+            --amend ${{ env.LATEST_IMAGE }}-amd64 \
+            --amend ${{ env.LATEST_IMAGE }}-arm64
+          docker manifest inspect ${{ env.LATEST_IMAGE }}
+          docker manifest push ${{ env.LATEST_IMAGE }}

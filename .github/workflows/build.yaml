@@ -40,7 +40,7 @@ jobs:
             ARCH=${{ matrix.arch }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          tags: ${{ env.IMAGE }}:latest-${{ matrix.platform }},${{ env.IMAGE }}:${{ github.sha }}-${{ matrix.platform }}
+          tags: ${{ env.IMAGE }}-${{ matrix.platform }}:latest,${{ env.IMAGE }}-${{ matrix.platform }}:${{ github.sha }}
 
   create-manifest:
     runs-on: ubuntu-latest
@@ -55,21 +55,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.PAT }}
       - name: Create SHA manifest and push
-        env:
-          SHA_IMAGE: ${{ env.IMAGE }}:${{ github.sha }}
         run: |
-          docker manifest create ${{ env.SHA_IMAGE }} \
-            --amend ${{ env.SHA_IMAGE }}-amd64 \
-            --amend ${{ env.SHA_IMAGE }}-arm64
-          docker manifest inspect ${{ env.SHA_IMAGE }}
-          docker manifest push ${{ env.SHA_IMAGE }}
-
+          docker buildx imagetools create -t "${{ env.IMAGE }}:${{ github.sha }}" \
+            "${{ env.IMAGE }}-amd64:${{ github.sha }}" \
+            "${{ env.IMAGE }}-arm64:${{ github.sha }}"
       - name: Create latest manifest and push
-        env:
-          LATEST_IMAGE: ${{ env.IMAGE }}:latest
         run: |
-          docker manifest create ${{ env.IMAGE }} \
-            --amend ${{ env.LATEST_IMAGE }}-amd64 \
-            --amend ${{ env.LATEST_IMAGE }}-arm64
-          docker manifest inspect ${{ env.LATEST_IMAGE }}
-          docker manifest push ${{ env.LATEST_IMAGE }}
+          docker buildx imagetools create -t "${{ env.IMAGE }}:latest" \
+            "${{ env.IMAGE }}-amd64:latest" \
+            "${{ env.IMAGE }}-arm64:latest"

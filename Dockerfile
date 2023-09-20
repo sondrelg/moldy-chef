@@ -1,6 +1,12 @@
 FROM lukemathwalker/cargo-chef:latest-rust-1
 
-ENV RUSTFLAGS="-C linker=clang link-arg=-fuse-ld=/usr/bin/mold"
+RUN mkdir /usr/bin/.config && touch /usr/bin/.config/cargo.toml  \
+    && echo '[target.x86_64-unknown-linux-gnu]' > /usr/bin/.config/cargo.toml \
+    && echo 'linker = "clang"' >> /usr/bin/.config/cargo.toml \
+    && echo 'rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]' >> /usr/bin/.config/cargo.toml \
+    && echo '[target.aarch64-unknown-linux-gnu]' > /usr/bin/.config/cargo.toml \
+    && echo 'linker = "clang"' >> /usr/bin/.config/cargo.toml \
+    && echo 'rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]' >> /usr/bin/.config/cargo.toml
 
 WORKDIR app
 

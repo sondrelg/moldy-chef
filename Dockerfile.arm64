@@ -1,0 +1,26 @@
+FROM lukemathwalker/cargo-chef:latest-rust-1
+
+ENV RUSTFLAGS="-C linker=clang link-arg=-fuse-ld=/usr/bin/mold"
+
+WORKDIR app
+
+ARG VERSION
+ARG ARCH
+
+RUN echo '[target.x86_64-unknown-linux-gnu]' > your_file.toml \
+    && echo 'linker = "clang"' >> your_file.toml \
+    && echo 'rustflags = ["-C", "link-arg=-fuse-ld=/path/to/mold"]' >> your_file.toml \
+    && echo '[target.aarch64-unknown-linux-gnu]' > your_file.toml \
+    && echo 'linker = "clang"' >> your_file.toml \
+    && echo 'rustflags = ["-C", "link-arg=-fuse-ld=/path/to/mold"]' >> your_file.toml \
+
+RUN apt-get update && apt-get install git g++
+
+RUN git clone https://github.com/rui314/mold.git \
+    && mkdir mold/build \
+    && cd mold/build \
+    && git checkout v2.1.0 \
+    && ../install-build-deps.sh \
+    && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=c++ .. \
+    && cmake --build . -j $(nproc) \
+    && sudo cmake --build . --target install

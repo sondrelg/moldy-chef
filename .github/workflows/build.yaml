@@ -7,7 +7,7 @@ on:
     - cron: '0 3 * * 2' # 3am Tuesday UTC
 
 env:
-  VERSION: 1.11.0
+  VERSION: 2.1.0
   IMAGE: ghcr.io/sondrelg/moldy-chef
 
 jobs:
@@ -37,7 +37,6 @@ jobs:
           platforms: linux/${{ matrix.platform }}
           build-args: |
             VERSION=${{ env.VERSION }}
-            ARCH=${{ matrix.arch }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: ${{ env.IMAGE }}-${{ matrix.platform }}:latest,${{ env.IMAGE }}-${{ matrix.platform }}:${{ github.sha }}

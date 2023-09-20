@@ -5,10 +5,17 @@ ENV RUSTFLAGS="-C linker=clang link-arg=-fuse-ld=/usr/bin/mold"
 WORKDIR app
 
 ARG VERSION
-ARG ARCH
 
-RUN apt-get update \
-    && apt-get install clang -y \
-    && wget -c https://github.com/rui314/mold/releases/download/v1.11.0/mold-${VERSION}-${ARCH}-linux.tar.gz -O - | tar -xz \
-    && mv mold-${VERSION}-${ARCH}-linux/bin/mold /usr/bin/mold \
-    && rm -rf mold-${VERSION}-${ARCH}-linux/bin/mold
+RUN apt-get update && apt-get install git
+
+RUN git clone https://github.com/rui314/mold.git \
+    && mkdir mold/build \
+    && cd mold/build \
+    && git checkout "v$VERSION" \
+    && ../install-build-deps.sh \
+    && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=c++ .. \
+    && cmake --build . -j $(nproc) \
+    && cmake --build . --target install \
+    && cp mold /usr/bin/mold \
+    && cd .. \
+    && rm -rf ./mold
